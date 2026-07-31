@@ -1,0 +1,301 @@
+{
+  "6000": {
+    "Version": {
+      "giper-baza": "mam@2026-07-31"
+    },
+    "Bundle size": {
+      "giper-baza": "530001 bytes"
+    },
+    "Bundle size (gzipped)": {
+      "giper-baza": "99547 bytes"
+    },
+    "[B1.1] Append N characters (time)": {
+      "giper-baza": "3416 ms"
+    },
+    "[B1.1] Append N characters (avgUpdateSize)": {
+      "giper-baza": "3259 bytes"
+    },
+    "[B1.1] Append N characters (encodeTime)": {
+      "giper-baza": "0 ms"
+    },
+    "[B1.1] Append N characters (docSize)": {
+      "giper-baza": "6664 bytes"
+    },
+    "[B1.1] Append N characters (memUsed)": {
+      "giper-baza": "0 B"
+    },
+    "[B1.1] Append N characters (parseTime)": {
+      "giper-baza": "205 ms"
+    },
+    "[B1.2] Insert string of length N (time)": {
+      "giper-baza": "1 ms"
+    },
+    "[B1.2] Insert string of length N (avgUpdateSize)": {
+      "giper-baza": "6256 bytes"
+    },
+    "[B1.2] Insert string of length N (encodeTime)": {
+      "giper-baza": "0 ms"
+    },
+    "[B1.2] Insert string of length N (docSize)": {
+      "giper-baza": "6664 bytes"
+    },
+    "[B1.2] Insert string of length N (memUsed)": {
+      "giper-baza": "161.7 kB"
+    },
+    "[B1.2] Insert string of length N (parseTime)": {
+      "giper-baza": "47 ms"
+    },
+    "[B1.3] Prepend N characters (time)": {
+      "giper-baza": "2888 ms"
+    },
+    "[B1.3] Prepend N characters (avgUpdateSize)": {
+      "giper-baza": "3259 bytes"
+    },
+    "[B1.3] Prepend N characters (encodeTime)": {
+      "giper-baza": "0 ms"
+    },
+    "[B1.3] Prepend N characters (docSize)": {
+      "giper-baza": "6664 bytes"
+    },
+    "[B1.3] Prepend N characters (memUsed)": {
+      "giper-baza": "27.7 kB"
+    },
+    "[B1.3] Prepend N characters (parseTime)": {
+      "giper-baza": "272 ms"
+    },
+    "[B1.4] Insert N characters at random positions (time)": {
+      "giper-baza": "2367 ms"
+    },
+    "[B1.4] Insert N characters at random positions (avgUpdateSize)": {
+      "giper-baza": "3259 bytes"
+    },
+    "[B1.4] Insert N characters at random positions (encodeTime)": {
+      "giper-baza": "0 ms"
+    },
+    "[B1.4] Insert N characters at random positions (docSize)": {
+      "giper-baza": "6664 bytes"
+    },
+    "[B1.4] Insert N characters at random positions (memUsed)": {
+      "giper-baza": "12.2 kB"
+    },
+    "[B1.4] Insert N characters at random positions (parseTime)": {
+      "giper-baza": "65 ms"
+    },
+    "[B1.5] Insert N words at random positions (time)": {
+      "giper-baza": "3375 ms"
+    },
+    "[B1.5] Insert N words at random positions (avgUpdateSize)": {
+      "giper-baza": "18401 bytes"
+    },
+    "[B1.5] Insert N words at random positions (encodeTime)": {
+      "giper-baza": "0 ms"
+    },
+    "[B1.5] Insert N words at random positions (docSize)": {
+      "giper-baza": "36856 bytes"
+    },
+    "[B1.5] Insert N words at random positions (memUsed)": {
+      "giper-baza": "55.5 kB"
+    },
+    "[B1.5] Insert N words at random positions (parseTime)": {
+      "giper-baza": "63 ms"
+    },
+    "[B1.6] Insert string, then delete it (time)": {
+      "giper-baza": "1 ms"
+    },
+    "[B1.6] Insert string, then delete it (avgUpdateSize)": {
+      "giper-baza": "6496 bytes"
+    },
+    "[B1.6] Insert string, then delete it (encodeTime)": {
+      "giper-baza": "0 ms"
+    },
+    "[B1.6] Insert string, then delete it (docSize)": {
+      "giper-baza": "648 bytes"
+    },
+    "[B1.6] Insert string, then delete it (memUsed)": {
+      "giper-baza": "61.8 kB"
+    },
+    "[B1.6] Insert string, then delete it (parseTime)": {
+      "giper-baza": "38 ms"
+    },
+    "[B1.7] Insert/Delete strings at random positions (time)": {
+      "giper-baza": "2215 ms"
+    },
+    "[B1.7] Insert/Delete strings at random positions (avgUpdateSize)": {
+      "giper-baza": "1375 bytes"
+    },
+    "[B1.7] Insert/Delete strings at random positions (encodeTime)": {
+      "giper-baza": "0 ms"
+    },
+    "[B1.7] Insert/Delete strings at random positions (docSize)": {
+      "giper-baza": "3176 bytes"
+    },
+    "[B1.7] Insert/Delete strings at random positions (memUsed)": {
+      "giper-baza": "14.7 kB"
+    },
+    "[B1.7] Insert/Delete strings at random positions (parseTime)": {
+      "giper-baza": "57 ms"
+    },
+    "[B1.8] Append N numbers (time)": {
+      "giper-baza": "4586 ms"
+    },
+    "[B1.8] Append N numbers (avgUpdateSize)": {
+      "giper-baza": "248 bytes"
+    },
+    "[B1.8] Append N numbers (encodeTime)": {
+      "giper-baza": "25 ms"
+    },
+    "[B1.8] Append N numbers (docSize)": {
+      "giper-baza": "864512 bytes"
+    },
+    "[B1.8] Append N numbers (memUsed)": {
+      "giper-baza": "35.5 MB"
+    },
+    "[B1.8] Append N numbers (parseTime)": {
+      "giper-baza": "663 ms"
+    },
+    "[B1.9] Insert Array of N numbers (time)": {
+      "giper-baza": "502 ms"
+    },
+    "[B1.9] Insert Array of N numbers (avgUpdateSize)": {
+      "giper-baza": "412904 bytes"
+    },
+    "[B1.9] Insert Array of N numbers (encodeTime)": {
+      "giper-baza": "19 ms"
+    },
+    "[B1.9] Insert Array of N numbers (docSize)": {
+      "giper-baza": "413312 bytes"
+    },
+    "[B1.9] Insert Array of N numbers (memUsed)": {
+      "giper-baza": "18.4 MB"
+    },
+    "[B1.9] Insert Array of N numbers (parseTime)": {
+      "giper-baza": "312 ms"
+    },
+    "[B1.10] Prepend N numbers (time)": {
+      "giper-baza": "4998 ms"
+    },
+    "[B1.10] Prepend N numbers (avgUpdateSize)": {
+      "giper-baza": "248 bytes"
+    },
+    "[B1.10] Prepend N numbers (encodeTime)": {
+      "giper-baza": "24 ms"
+    },
+    "[B1.10] Prepend N numbers (docSize)": {
+      "giper-baza": "864512 bytes"
+    },
+    "[B1.10] Prepend N numbers (memUsed)": {
+      "giper-baza": "35.4 MB"
+    },
+    "[B1.10] Prepend N numbers (parseTime)": {
+      "giper-baza": "661 ms"
+    },
+    "[B1.11] Insert N numbers at random positions (time)": {
+      "giper-baza": "6631 ms"
+    },
+    "[B1.11] Insert N numbers at random positions (avgUpdateSize)": {
+      "giper-baza": "248 bytes"
+    },
+    "[B1.11] Insert N numbers at random positions (encodeTime)": {
+      "giper-baza": "24 ms"
+    },
+    "[B1.11] Insert N numbers at random positions (docSize)": {
+      "giper-baza": "864512 bytes"
+    },
+    "[B1.11] Insert N numbers at random positions (memUsed)": {
+      "giper-baza": "35.5 MB"
+    },
+    "[B1.11] Insert N numbers at random positions (parseTime)": {
+      "giper-baza": "703 ms"
+    },
+    "[B3.1] 20√N clients concurrently set number in Map (time)": {
+      "giper-baza": "226 ms"
+    },
+    "[B3.1] 20√N clients concurrently set number in Map (updateSize)": {
+      "giper-baza": "466112 bytes"
+    },
+    "[B3.1] 20√N clients concurrently set number in Map (encodeTime)": {
+      "giper-baza": "21 ms"
+    },
+    "[B3.1] 20√N clients concurrently set number in Map (docSize)": {
+      "giper-baza": "429584 bytes"
+    },
+    "[B3.1] 20√N clients concurrently set number in Map (memUsed)": {
+      "giper-baza": "16 MB"
+    },
+    "[B3.1] 20√N clients concurrently set number in Map (parseTime)": {
+      "giper-baza": "337 ms"
+    },
+    "[B3.2] 20√N clients concurrently set Object in Map (time)": {
+      "giper-baza": "201 ms"
+    },
+    "[B3.2] 20√N clients concurrently set Object in Map (updateSize)": {
+      "giper-baza": "492800 bytes"
+    },
+    "[B3.2] 20√N clients concurrently set Object in Map (encodeTime)": {
+      "giper-baza": "23 ms"
+    },
+    "[B3.2] 20√N clients concurrently set Object in Map (docSize)": {
+      "giper-baza": "456128 bytes"
+    },
+    "[B3.2] 20√N clients concurrently set Object in Map (memUsed)": {
+      "giper-baza": "16 MB"
+    },
+    "[B3.2] 20√N clients concurrently set Object in Map (parseTime)": {
+      "giper-baza": "331 ms"
+    },
+    "[B3.3] 20√N clients concurrently set String in Map (time)": {
+      "giper-baza": "205 ms"
+    },
+    "[B3.3] 20√N clients concurrently set String in Map (updateSize)": {
+      "giper-baza": "8261120 bytes"
+    },
+    "[B3.3] 20√N clients concurrently set String in Map (encodeTime)": {
+      "giper-baza": "19 ms"
+    },
+    "[B3.3] 20√N clients concurrently set String in Map (docSize)": {
+      "giper-baza": "8224448 bytes"
+    },
+    "[B3.3] 20√N clients concurrently set String in Map (memUsed)": {
+      "giper-baza": "16.2 MB"
+    },
+    "[B3.3] 20√N clients concurrently set String in Map (parseTime)": {
+      "giper-baza": "439 ms"
+    },
+    "[B3.4] 20√N clients concurrently insert text in Array (time)": {
+      "giper-baza": "149 ms"
+    },
+    "[B3.4] 20√N clients concurrently insert text in Array (updateSize)": {
+      "giper-baza": "381840 bytes"
+    },
+    "[B3.4] 20√N clients concurrently insert text in Array (encodeTime)": {
+      "giper-baza": "12 ms"
+    },
+    "[B3.4] 20√N clients concurrently insert text in Array (docSize)": {
+      "giper-baza": "345168 bytes"
+    },
+    "[B3.4] 20√N clients concurrently insert text in Array (memUsed)": {
+      "giper-baza": "12.5 MB"
+    },
+    "[B3.4] 20√N clients concurrently insert text in Array (parseTime)": {
+      "giper-baza": "328 ms"
+    },
+    "[B3.5] 20√N clients concurrently insert text (time)": {
+      "giper-baza": "143 ms"
+    },
+    "[B3.5] 20√N clients concurrently insert text (updateSize)": {
+      "giper-baza": "381840 bytes"
+    },
+    "[B3.5] 20√N clients concurrently insert text (encodeTime)": {
+      "giper-baza": "9 ms"
+    },
+    "[B3.5] 20√N clients concurrently insert text (docSize)": {
+      "giper-baza": "345168 bytes"
+    },
+    "[B3.5] 20√N clients concurrently insert text (memUsed)": {
+      "giper-baza": "11.1 MB"
+    },
+    "[B3.5] 20√N clients concurrently insert text (parseTime)": {
+      "giper-baza": "350 ms"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "giper-baza-benchmarks",
+  "version": "1.0.0",
+  "description": "Giper Baza benchmarks",
+  "main": "./run.js",
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "measure-bundle": "node ./measure-bundle.js",
+    "start": "npm run measure-bundle && node --expose-gc run.js && npm run table",
+    "start:bun": "npm run measure-bundle && bun run run.js && npm run table",
+    "table": "echo 'Giper Baza results: \n\n' && node ../../bin/render-table.js ../results.json 6000 giper-baza"
+  },
+  "license": "MIT"
+}
