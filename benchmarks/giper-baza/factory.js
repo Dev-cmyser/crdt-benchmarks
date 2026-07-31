@@ -44,7 +44,18 @@ const verifySync = (auditor, data, sign) => {
   return crypto.verify(null, data, key, sign)
 }
 
-$.$giper_baza_crdtbench_crypto(signSync, verifySync)
+/*
+ * GIPER_BAZA_NO_SIGN=1 replaces Ed25519 by a constant Seal signature that always verifies.
+ * This is NOT a configuration Baza supports — a Seal is mandatory for every foreign Unit — it
+ * only exists to attribute the running time between the CRDT layer and the signatures. Every
+ * other step (encoding, sealing, packing, parsing, rights checks) stays exactly the same.
+ */
+const fakeSign = new Uint8Array(64)
+
+$.$giper_baza_crdtbench_crypto(
+  process.env.GIPER_BAZA_NO_SIGN ? () => fakeSign : signSync,
+  process.env.GIPER_BAZA_NO_SIGN ? () => true : verifySync
+)
 
 /**
  * A Baza Auth key is an Ed25519 pair plus an X25519 pair. The public Ed25519 part must start

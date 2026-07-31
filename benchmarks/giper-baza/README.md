@@ -1,10 +1,15 @@
 # Giper Baza benchmark
 
 ```sh
-npm start                              # B1 + B3, writes ../results.json
-GIPER_BAZA_ALL=1 node --expose-gc run.js   # everything, including the skipped B2 / B4
-node merge-bug.mjs                     # reproducer of the B2 merge bug
+npm start                                     # B1 + B3, writes ../results.json
+GIPER_BAZA_ALL=1 node --expose-gc run.js      # everything, including the skipped B2 / B4
+GIPER_BAZA_NO_SIGN=1 node --expose-gc run.js  # same, with the Ed25519 Seal stubbed out
+node merge-bug.mjs                            # reproducer of the B2 merge bug
 ```
+
+Proof of work is zero in this benchmark: the shared Land grants
+`$giper_baza_rank_post('just')`, and at the `just` rate the sealing loop
+`while (seal.rate_min() > rate)` always exits on the first signature.
 
 Methodology, what is stubbed out and why B2 / B4 are skipped: see the "Giper Baza" section of
 the [root README](../../README.md).

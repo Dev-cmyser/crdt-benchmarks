@@ -64,7 +64,12 @@ namespace $ {
 			const $ = this.isolate( this.auth_next() )
 			$.$giper_baza_auth.embryos = [ king.toString() + king.toStringPrivate() ]
 
-			// `just` rate means no Proof of Work per Seal, only the signature.
+			/**
+			 * Proof of Work per Seal is tuned by the rate nibble of the Peer rank. Sealing loops
+			 * `while( seal.rate_min() > rate )`, and every value of `$giper_baza_rank_work_rates`
+			 * is `<= 0xF`, so the `just` rate exits on the first signature: PoW is zero here.
+			 * `late` (`0x0`) would be the opposite end, ~2**32 signatures per Seal.
+			 */
 			const land = $.$giper_baza_glob.land_grab([ [ null, $giper_baza_rank_post( 'just' ) ] ])
 
 			this.land_link = land.link()
