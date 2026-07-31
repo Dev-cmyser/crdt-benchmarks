@@ -105,9 +105,11 @@ server).
 every batch of changes is Ed25519 signed, access is checked against per-Land rights, and writes
 can be throttled with tunable proof of work. PoW is a knob and it is set to zero here, so the
 numbers measure the CRDT layer on the same footing as everyone else; the signatures, which
-cannot be switched off, account for around 15% on the editing benchmarks. It also does not ship
-on npm as a standalone package, so `benchmarks/giper-baza/giper-baza.cjs` is a prebuilt MAM
-bundle. See the "Giper Baza" section below for what exactly is measured and what is skipped.
+cannot be switched off, are a third to a half of the map benchmarks and disappear into the noise
+on the text ones. Text is modelled as a sequence of single characters, like everywhere else in
+this suite, rather than through Baza's word-token text Pawn. It also does not ship on npm as a
+standalone package, so `benchmarks/giper-baza/giper-baza.cjs` is a prebuilt MAM bundle. See the
+"Giper Baza" section below for what exactly is measured and what is skipped.
 * Loro has a concept named `snapshot`, which can significantly reduce
 loading time as it contains the operations **and** the in-memory
 representation of the document. Note that this feature is only useful in
@@ -263,8 +265,35 @@ document is an independent `$` context with its own Glob, its own Auth key and i
 starting from the same bootstrap Pack. A change posts Sands, an update is a Pack that carries
 the new Sands, one Ed25519 Seal over them and the author's Pass; the receiving document parses
 the Pack and verifies the signature before applying. `getEncodedState` is the full `diff_parts`
-of the Land. Text goes through `$giper_baza_text`, arrays through `$giper_baza_list`, maps
-through `$giper_baza_dict` + `$giper_baza_atom`.
+of the Land. Text and arrays go through `$giper_baza_list` — separate Pawns, one Sand per item —
+maps through `$giper_baza_dict` + `$giper_baza_atom`.
+
+**Text is a character sequence.** Baza's own text Pawn, `$giper_baza_text`, is a list of word
+tokens: an edit inside a token rewrites the whole token as one Sand. That is a coarser unit than
+the rest of this suite measures, and it also breaks concurrent editing — the replacement Sand
+reuses the `self` of the token it supersedes, so two peers editing one word leave two Sands with
+one `self`, which `sand_ordered` mixes up (see the note on `merge-bug.mjs` below). So the adapter
+models text the way the other libraries do, as a `$giper_baza_list` of single characters. An
+insert is `splice(chars, i, i)`, which leaves `$mol_reconcile` with the `insert` branch only:
+every character gets its own `self_make()` Self, nothing is ever reused, and [B2] converges.
+
+The price is visible in the table. Against the word-token version of the same adapter:
+
+| | word tokens | character sequence |
+| :- | -: | -: |
+| [B1.1] Append N characters (time) | 3,797 ms | 4,425 ms |
+| [B1.1] Append N characters (avgUpdateSize) | 3,259 bytes | 240 bytes |
+| [B1.1] Append N characters (docSize) | 6,664 bytes | 816,512 bytes |
+| [B1.4] Insert N chars at random positions (time) | 2,489 ms | 6,707 ms |
+| [B1.5] Insert N words at random positions (time) | 3,517 ms | 47,075 ms |
+| [B1.6] Insert string, then delete it (docSize) | 648 bytes | 365,312 bytes |
+| [B1.7] Insert/Delete strings at random positions (time) | 2,385 ms | does not finish |
+| [B2] Concurrent editing | loses text | converges |
+
+Updates get honest — a keystroke ships 240 bytes instead of resending the word it landed in —
+and everything else gets worse, because now the Pawn holds one Sand per character instead of one
+per word. `docSize` never shrinks either: a delete posts a tombstone that keeps its Self, so
+[B1.6] ends at 365 kB for an empty document.
 
 **What is not measured.** Persistence (`$giper_baza_mine_temp`, an in-memory stub), the Yard
 (no master, no WebSocket, no BroadcastChannel), and encryption — the Land is public, so Sand
@@ -277,11 +306,12 @@ and `$mol_crypto2_auditor` for the synchronous Ed25519 of `node:crypto` — same
 work, without the Promise. Nothing else about the write path is stubbed: Units are encoded,
 signed, packed, parsed and verified for real.
 
-**Reading the update sizes.** Baza's text is a list of word tokens, and an edit inside a token
-rewrites the whole token as a new Sand. So `avgUpdateSize` for the character-by-character
-benchmarks is not the size of a keystroke: appending to one 6,000 character word ships that
-whole word every time. `docSize` stays small because the superseded Sands are dropped, and the
-word-level benchmarks ([B1.5], [B1.7]) are closer to what an editor would actually produce.
+**Why the adapter collects fibers by hand.** Every `@$mol_action` on the write path is a
+one-shot fiber, and $mol destroys finished fibers on the next tick. This harness runs one
+uninterrupted synchronous loop and never gives the event loop that tick, so the queue would grow
+for the whole run — on [B2.3] it reached tens of KB per edit and blew a 4 GB heap. The adapter
+drains the queue inline after each operation, which is what the runtime does between ticks in a
+real application. Only one-shot Tasks are collected; memoized Atoms are the document state.
 
 **Proof of work is set to zero, so the numbers below are the CRDT layer.** Baza can rate-limit
 writes with proof of work, and how much of it a Peer has to do is a knob: the low nibble of that
@@ -307,39 +337,56 @@ constant that always verifies — not a supported mode, only an attribution:
 
 | | with Ed25519 | signature stubbed | share |
 | :- | -: | -: | -: |
-| [B1.1] Append N characters | 3,797 ms | 3,309 ms | 13% |
-| [B1.4] Insert N chars at random positions | 2,489 ms | 2,157 ms | 13% |
-| [B1.7] Insert/Delete strings at random positions | 2,385 ms | 1,989 ms | 17% |
-| [B1.11] Insert N numbers at random positions | 7,578 ms | 6,582 ms | 13% |
-| [B3.1] 20√N clients set number in Map | 242 ms | 167 ms | 31% |
-| [B3.4] 20√N clients insert text in Array | 170 ms | 96 ms | 44% |
+| [B1.1] Append N characters | 4,425 ms | 4,235 ms | 4% |
+| [B1.4] Insert N chars at random positions | 6,707 ms | 6,756 ms | — |
+| [B1.8] Append N numbers | 5,103 ms | 4,713 ms | 8% |
+| [B1.11] Insert N numbers at random positions | 7,188 ms | 6,768 ms | 6% |
+| [B2.2] Concurrently insert N chars at random positions | 39,891 ms | 40,007 ms | — |
+| [B3.1] 20√N clients set number in Map | 253 ms | 175 ms | 31% |
+| [B3.4] 20√N clients insert text in Array | 176 ms | 100 ms | 43% |
 
-B1 is dominated by the merge layer, so signing is a seventh of it or less. B3 is dominated by
-applying 20√N updates into one document, one verification each, so there it is a third to a
-half. Read the other way round: the whole security model — signed history, per-Land rights,
-optional encryption, tunable write throttling — costs Giper Baza around 15% on editing
-workloads, and none of the other libraries here offer it at any price. Both columns come from
-the same back-to-back session, so they are comparable to each other; run-to-run spread on this
-machine is around 10%.
+On B1 and B2 the signatures now disappear into the noise: with one Sand per character the merge
+layer costs so much more than Ed25519 that stubbing it out changes nothing measurable. B3 is
+dominated by applying 20√N updates into one document, one verification each, and there signing
+is still a third to a half of the time. Both columns come from the same back-to-back session, so
+they are comparable to each other; run-to-run spread on this machine is around 10%.
 
 #### Skipped benchmarks
 
-* **[B2]** — hits a merge bug rather than a performance limit. `$giper_baza_text.write`
-  replaces a token by posting a Sand that reuses the `self` of the previous one, so two peers
-  editing the same token leave two Sands with one `self` under two Lords.
-  `$giper_baza_land.sand_ordered` keeps `by_key` (self to list node) and `by_self` (self to
-  winning node) consistent only while the winner is met first, and `$giper_baza_unit_sand.compare`
-  orders same-second Sands by Lord. So whenever the second editor's Lord sorts before the first
-  editor's, the loser node is linked, then evicted from `by_key` while `by_self` still points at
-  it, and everything that leads on it drops out of the result. `node benchmarks/giper-baza/merge-bug.mjs`
-  reproduces it on a single stock Land, with no sync, no Packs and no signatures: 6 of 12 merges
-  lose text, exactly the 6 where the second Lord sorts first.
-* **[B4] / [B4x100]** — do not finish. Baza re-sorts every Sand of a Pawn on each write, and the
-  editing trace only appends to one Pawn, so the cost per edit keeps growing: 1,000 edits in
-  0.18 s, 2,000 in 1.0 s, 4,000 in 9.5 s. Extrapolating that curve to the full 259,778 edit trace
-  puts it far beyond a benchmark run.
+**[B1.7], [B2.4], [B4] and [B4x100] do not finish**, all for one reason.
+`$giper_baza_pawn.units()` goes through `$giper_baza_land.sand_ordered`, which rebuilds the order
+of a whole Pawn from scratch — sort every Sand of that head, then relink them through their
+`lead` references. Every write invalidates it, so one edit costs a full pass over the Pawn, and
+the pass degrades to quadratic once the Sands stop arriving in `lead` order. Deletions are
+exactly what breaks that order, and their tombstones stay in the Pawn forever, so the cost keeps
+growing after the deleted text is gone:
 
-Run them anyway with `GIPER_BAZA_ALL=1 node --expose-gc run.js`.
+```
+$ node benchmarks/giper-baza/order-cost.mjs
+edits  time      live chars  ms/edit
+  125    231 ms         121       1.8
+  250   2665 ms         154      10.7
+  500  38263 ms         307      76.5
+```
+
+The document there never exceeds a few hundred characters. Insert-only traces stay usable — that
+is why [B1.1]–[B1.6] and [B2.1]–[B2.3] are in the table — but mixed insert/delete traces are not:
+the [B4] editing trace takes 0.16 s for its first 1,000 edits, 0.68 s for 2,000, 53 s for 4,000,
+and it has 259,778 of them.
+
+There is also a **separate merge bug** on the word-token path that this adapter no longer takes.
+`$giper_baza_text.write` replaces a token by posting a Sand that reuses the `self` of the previous
+one, so two peers editing the same token leave two Sands with one `self` under two Lords.
+`sand_ordered` keeps `by_key` (self to list node) and `by_self` (self to winning node) consistent
+only while the winner is met first, and `$giper_baza_unit_sand.compare` orders same-second Sands
+by Lord. So whenever the second editor's Lord sorts before the first editor's, the loser node is
+linked, then evicted from `by_key` while `by_self` still points at it, and everything that leads
+on it drops out of the result. `node benchmarks/giper-baza/merge-bug.mjs` reproduces it on a
+single stock Land, with no sync, no Packs and no signatures: 6 of 12 merges lose text, exactly the
+6 where the second Lord sorts first. Modelling text as a character sequence avoids it, because
+`splice(chars, i, i)` never reuses a `self`.
+
+Run the skipped benchmarks anyway with `GIPER_BAZA_ALL=1 node --expose-gc run.js`.
 
 #### Results
 
@@ -348,105 +395,117 @@ was produced on different hardware, so do not read the two side by side.
 
 |N = 6000 | giper-baza|
 | :- |  -:  |
-|Version                                                                   |   mam@2026-07-31 |
-|Bundle size                                                               |    530,330 bytes |
-|Bundle size (gzipped)                                                     |     99,685 bytes |
-|[B1.1] Append N characters (time)                                         |         3,797 ms |
-|[B1.1] Append N characters (avgUpdateSize)                                |      3,259 bytes |
-|[B1.1] Append N characters (encodeTime)                                   |             0 ms |
-|[B1.1] Append N characters (docSize)                                      |      6,664 bytes |
-|[B1.1] Append N characters (memUsed)                                      |              0 B |
-|[B1.1] Append N characters (parseTime)                                    |           240 ms |
-|[B1.2] Insert string of length N (time)                                   |             1 ms |
-|[B1.2] Insert string of length N (avgUpdateSize)                          |      6,256 bytes |
-|[B1.2] Insert string of length N (encodeTime)                             |             0 ms |
-|[B1.2] Insert string of length N (docSize)                                |      6,664 bytes |
-|[B1.2] Insert string of length N (memUsed)                                |          22.1 kB |
-|[B1.2] Insert string of length N (parseTime)                              |            48 ms |
-|[B1.3] Prepend N characters (time)                                        |         3,054 ms |
-|[B1.3] Prepend N characters (avgUpdateSize)                               |      3,259 bytes |
-|[B1.3] Prepend N characters (encodeTime)                                  |             0 ms |
-|[B1.3] Prepend N characters (docSize)                                     |      6,664 bytes |
-|[B1.3] Prepend N characters (memUsed)                                     |          28.7 kB |
-|[B1.3] Prepend N characters (parseTime)                                   |           251 ms |
-|[B1.4] Insert N characters at random positions (time)                     |         2,489 ms |
-|[B1.4] Insert N characters at random positions (avgUpdateSize)            |      3,259 bytes |
-|[B1.4] Insert N characters at random positions (encodeTime)               |             0 ms |
-|[B1.4] Insert N characters at random positions (docSize)                  |      6,664 bytes |
-|[B1.4] Insert N characters at random positions (memUsed)                  |          13.1 kB |
-|[B1.4] Insert N characters at random positions (parseTime)                |            79 ms |
-|[B1.5] Insert N words at random positions (time)                          |         3,517 ms |
-|[B1.5] Insert N words at random positions (avgUpdateSize)                 |     18,401 bytes |
-|[B1.5] Insert N words at random positions (encodeTime)                    |             0 ms |
-|[B1.5] Insert N words at random positions (docSize)                       |     36,856 bytes |
-|[B1.5] Insert N words at random positions (memUsed)                       |          53.4 kB |
-|[B1.5] Insert N words at random positions (parseTime)                     |            65 ms |
-|[B1.6] Insert string, then delete it (time)                               |             1 ms |
-|[B1.6] Insert string, then delete it (avgUpdateSize)                      |      6,496 bytes |
-|[B1.6] Insert string, then delete it (encodeTime)                         |             0 ms |
-|[B1.6] Insert string, then delete it (docSize)                            |        648 bytes |
-|[B1.6] Insert string, then delete it (memUsed)                            |          61.8 kB |
-|[B1.6] Insert string, then delete it (parseTime)                          |            47 ms |
-|[B1.7] Insert/Delete strings at random positions (time)                   |         2,385 ms |
-|[B1.7] Insert/Delete strings at random positions (avgUpdateSize)          |      1,375 bytes |
-|[B1.7] Insert/Delete strings at random positions (encodeTime)             |             0 ms |
-|[B1.7] Insert/Delete strings at random positions (docSize)                |      3,176 bytes |
-|[B1.7] Insert/Delete strings at random positions (memUsed)                |          12.5 kB |
-|[B1.7] Insert/Delete strings at random positions (parseTime)              |            66 ms |
-|[B1.8] Append N numbers (time)                                            |         4,903 ms |
-|[B1.8] Append N numbers (avgUpdateSize)                                   |        248 bytes |
-|[B1.8] Append N numbers (encodeTime)                                      |            25 ms |
-|[B1.8] Append N numbers (docSize)                                         |    864,512 bytes |
-|[B1.8] Append N numbers (memUsed)                                         |          35.5 MB |
-|[B1.8] Append N numbers (parseTime)                                       |           670 ms |
-|[B1.9] Insert Array of N numbers (time)                                   |           493 ms |
-|[B1.9] Insert Array of N numbers (avgUpdateSize)                          |    412,904 bytes |
-|[B1.9] Insert Array of N numbers (encodeTime)                             |            17 ms |
-|[B1.9] Insert Array of N numbers (docSize)                                |    413,312 bytes |
-|[B1.9] Insert Array of N numbers (memUsed)                                |          18.4 MB |
-|[B1.9] Insert Array of N numbers (parseTime)                              |           320 ms |
-|[B1.10] Prepend N numbers (time)                                          |         5,655 ms |
-|[B1.10] Prepend N numbers (avgUpdateSize)                                 |        248 bytes |
-|[B1.10] Prepend N numbers (encodeTime)                                    |            28 ms |
-|[B1.10] Prepend N numbers (docSize)                                       |    864,512 bytes |
-|[B1.10] Prepend N numbers (memUsed)                                       |          35.4 MB |
-|[B1.10] Prepend N numbers (parseTime)                                     |           707 ms |
-|[B1.11] Insert N numbers at random positions (time)                       |         7,578 ms |
-|[B1.11] Insert N numbers at random positions (avgUpdateSize)              |        248 bytes |
-|[B1.11] Insert N numbers at random positions (encodeTime)                 |            25 ms |
-|[B1.11] Insert N numbers at random positions (docSize)                    |    864,512 bytes |
-|[B1.11] Insert N numbers at random positions (memUsed)                    |          35.5 MB |
-|[B1.11] Insert N numbers at random positions (parseTime)                  |           734 ms |
-|[B3.1] 20√N clients concurrently set number in Map (time)                 |           242 ms |
-|[B3.1] 20√N clients concurrently set number in Map (updateSize)           |    466,112 bytes |
-|[B3.1] 20√N clients concurrently set number in Map (encodeTime)           |            21 ms |
-|[B3.1] 20√N clients concurrently set number in Map (docSize)              |    429,584 bytes |
-|[B3.1] 20√N clients concurrently set number in Map (memUsed)              |          15.9 MB |
-|[B3.1] 20√N clients concurrently set number in Map (parseTime)            |           356 ms |
-|[B3.2] 20√N clients concurrently set Object in Map (time)                 |           209 ms |
-|[B3.2] 20√N clients concurrently set Object in Map (updateSize)           |    492,800 bytes |
-|[B3.2] 20√N clients concurrently set Object in Map (encodeTime)           |            25 ms |
-|[B3.2] 20√N clients concurrently set Object in Map (docSize)              |    456,128 bytes |
-|[B3.2] 20√N clients concurrently set Object in Map (memUsed)              |            16 MB |
-|[B3.2] 20√N clients concurrently set Object in Map (parseTime)            |           345 ms |
-|[B3.3] 20√N clients concurrently set String in Map (time)                 |           221 ms |
-|[B3.3] 20√N clients concurrently set String in Map (updateSize)           |  8,261,120 bytes |
-|[B3.3] 20√N clients concurrently set String in Map (encodeTime)           |            20 ms |
-|[B3.3] 20√N clients concurrently set String in Map (docSize)              |  8,224,448 bytes |
-|[B3.3] 20√N clients concurrently set String in Map (memUsed)              |          16.2 MB |
-|[B3.3] 20√N clients concurrently set String in Map (parseTime)            |           466 ms |
-|[B3.4] 20√N clients concurrently insert text in Array (time)              |           170 ms |
-|[B3.4] 20√N clients concurrently insert text in Array (updateSize)        |    381,840 bytes |
-|[B3.4] 20√N clients concurrently insert text in Array (encodeTime)        |            13 ms |
-|[B3.4] 20√N clients concurrently insert text in Array (docSize)           |    345,168 bytes |
-|[B3.4] 20√N clients concurrently insert text in Array (memUsed)           |          12.5 MB |
-|[B3.4] 20√N clients concurrently insert text in Array (parseTime)         |           380 ms |
-|[B3.5] 20√N clients concurrently insert text (time)                       |           169 ms |
-|[B3.5] 20√N clients concurrently insert text (updateSize)                 |    381,840 bytes |
-|[B3.5] 20√N clients concurrently insert text (encodeTime)                 |            10 ms |
-|[B3.5] 20√N clients concurrently insert text (docSize)                    |    345,168 bytes |
-|[B3.5] 20√N clients concurrently insert text (memUsed)                    |          11.1 MB |
-|[B3.5] 20√N clients concurrently insert text (parseTime)                  |           381 ms |
+|Version                                                                   |    mam@2026-07-31 |
+|Bundle size                                                               |     532,366 bytes |
+|Bundle size (gzipped)                                                     |     100,421 bytes |
+|[B1.1] Append N characters (time)                                         |          4,425 ms |
+|[B1.1] Append N characters (avgUpdateSize)                                |         240 bytes |
+|[B1.1] Append N characters (encodeTime)                                   |             29 ms |
+|[B1.1] Append N characters (docSize)                                      |     816,512 bytes |
+|[B1.1] Append N characters (memUsed)                                      |           36.1 MB |
+|[B1.1] Append N characters (parseTime)                                    |            783 ms |
+|[B1.2] Insert string of length N (time)                                   |            568 ms |
+|[B1.2] Insert string of length N (avgUpdateSize)                          |     364,904 bytes |
+|[B1.2] Insert string of length N (encodeTime)                             |             30 ms |
+|[B1.2] Insert string of length N (docSize)                                |     365,312 bytes |
+|[B1.2] Insert string of length N (memUsed)                                |           18.4 MB |
+|[B1.2] Insert string of length N (parseTime)                              |            314 ms |
+|[B1.3] Prepend N characters (time)                                        |          5,170 ms |
+|[B1.3] Prepend N characters (avgUpdateSize)                               |         240 bytes |
+|[B1.3] Prepend N characters (encodeTime)                                  |             23 ms |
+|[B1.3] Prepend N characters (docSize)                                     |     816,512 bytes |
+|[B1.3] Prepend N characters (memUsed)                                     |           35.3 MB |
+|[B1.3] Prepend N characters (parseTime)                                   |            652 ms |
+|[B1.4] Insert N characters at random positions (time)                     |          6,707 ms |
+|[B1.4] Insert N characters at random positions (avgUpdateSize)            |         240 bytes |
+|[B1.4] Insert N characters at random positions (encodeTime)               |             25 ms |
+|[B1.4] Insert N characters at random positions (docSize)                  |     816,512 bytes |
+|[B1.4] Insert N characters at random positions (memUsed)                  |           35.4 MB |
+|[B1.4] Insert N characters at random positions (parseTime)                |            662 ms |
+|[B1.5] Insert N words at random positions (time)                          |         47,075 ms |
+|[B1.5] Insert N words at random positions (avgUpdateSize)                 |         504 bytes |
+|[B1.5] Insert N words at random positions (encodeTime)                    |            128 ms |
+|[B1.5] Insert N words at random positions (docSize)                       |   2,399,320 bytes |
+|[B1.5] Insert N words at random positions (memUsed)                       |          122.7 MB |
+|[B1.5] Insert N words at random positions (parseTime)                     |          7,060 ms |
+|[B1.6] Insert string, then delete it (time)                               |          3,547 ms |
+|[B1.6] Insert string, then delete it (avgUpdateSize)                      |     729,808 bytes |
+|[B1.6] Insert string, then delete it (encodeTime)                         |             32 ms |
+|[B1.6] Insert string, then delete it (docSize)                            |     365,312 bytes |
+|[B1.6] Insert string, then delete it (memUsed)                            |           14.5 MB |
+|[B1.6] Insert string, then delete it (parseTime)                          |            459 ms |
+|[B1.8] Append N numbers (time)                                            |          5,103 ms |
+|[B1.8] Append N numbers (avgUpdateSize)                                   |         248 bytes |
+|[B1.8] Append N numbers (encodeTime)                                      |             29 ms |
+|[B1.8] Append N numbers (docSize)                                         |     864,512 bytes |
+|[B1.8] Append N numbers (memUsed)                                         |           35.4 MB |
+|[B1.8] Append N numbers (parseTime)                                       |            793 ms |
+|[B1.9] Insert Array of N numbers (time)                                   |            506 ms |
+|[B1.9] Insert Array of N numbers (avgUpdateSize)                          |     412,904 bytes |
+|[B1.9] Insert Array of N numbers (encodeTime)                             |             33 ms |
+|[B1.9] Insert Array of N numbers (docSize)                                |     413,312 bytes |
+|[B1.9] Insert Array of N numbers (memUsed)                                |           18.4 MB |
+|[B1.9] Insert Array of N numbers (parseTime)                              |            493 ms |
+|[B1.10] Prepend N numbers (time)                                          |          5,609 ms |
+|[B1.10] Prepend N numbers (avgUpdateSize)                                 |         248 bytes |
+|[B1.10] Prepend N numbers (encodeTime)                                    |             28 ms |
+|[B1.10] Prepend N numbers (docSize)                                       |     864,512 bytes |
+|[B1.10] Prepend N numbers (memUsed)                                       |           35.3 MB |
+|[B1.10] Prepend N numbers (parseTime)                                     |            829 ms |
+|[B1.11] Insert N numbers at random positions (time)                       |          7,188 ms |
+|[B1.11] Insert N numbers at random positions (avgUpdateSize)              |         248 bytes |
+|[B1.11] Insert N numbers at random positions (encodeTime)                 |             23 ms |
+|[B1.11] Insert N numbers at random positions (docSize)                    |     864,512 bytes |
+|[B1.11] Insert N numbers at random positions (memUsed)                    |           35.4 MB |
+|[B1.11] Insert N numbers at random positions (parseTime)                  |            863 ms |
+|[B2.1] Concurrently insert string of length N at index 0 (time)           |          1,105 ms |
+|[B2.1] Concurrently insert string of length N at index 0 (updateSize)     |     367,996 bytes |
+|[B2.1] Concurrently insert string of length N at index 0 (encodeTime)     |             46 ms |
+|[B2.1] Concurrently insert string of length N at index 0 (docSize)        |     736,272 bytes |
+|[B2.1] Concurrently insert string of length N at index 0 (memUsed)        |           37.4 MB |
+|[B2.1] Concurrently insert string of length N at index 0 (parseTime)      |          1,093 ms |
+|[B2.2] Concurrently insert N characters at random positions (time)        |         39,891 ms |
+|[B2.2] Concurrently insert N characters at random positions (updateSize)  |     367,996 bytes |
+|[B2.2] Concurrently insert N characters at random positions (encodeTime)  |             41 ms |
+|[B2.2] Concurrently insert N characters at random positions (docSize)     |     736,272 bytes |
+|[B2.2] Concurrently insert N characters at random positions (memUsed)     |           37.5 MB |
+|[B2.2] Concurrently insert N characters at random positions (parseTime)   |          1,097 ms |
+|[B2.3] Concurrently insert N words at random positions (time)             |        209,888 ms |
+|[B2.3] Concurrently insert N words at random positions (updateSize)       |   2,178,964 bytes |
+|[B2.3] Concurrently insert N words at random positions (encodeTime)       |            242 ms |
+|[B2.3] Concurrently insert N words at random positions (docSize)          |   4,358,208 bytes |
+|[B2.3] Concurrently insert N words at random positions (memUsed)          |          223.2 MB |
+|[B2.3] Concurrently insert N words at random positions (parseTime)        |         23,069 ms |
+|[B3.1] 20√N clients concurrently set number in Map (time)                 |            253 ms |
+|[B3.1] 20√N clients concurrently set number in Map (updateSize)           |     466,112 bytes |
+|[B3.1] 20√N clients concurrently set number in Map (encodeTime)           |             28 ms |
+|[B3.1] 20√N clients concurrently set number in Map (docSize)              |     429,584 bytes |
+|[B3.1] 20√N clients concurrently set number in Map (memUsed)              |           15.7 MB |
+|[B3.1] 20√N clients concurrently set number in Map (parseTime)            |            691 ms |
+|[B3.2] 20√N clients concurrently set Object in Map (time)                 |            222 ms |
+|[B3.2] 20√N clients concurrently set Object in Map (updateSize)           |     492,800 bytes |
+|[B3.2] 20√N clients concurrently set Object in Map (encodeTime)           |             28 ms |
+|[B3.2] 20√N clients concurrently set Object in Map (docSize)              |     456,128 bytes |
+|[B3.2] 20√N clients concurrently set Object in Map (memUsed)              |             16 MB |
+|[B3.2] 20√N clients concurrently set Object in Map (parseTime)            |            734 ms |
+|[B3.3] 20√N clients concurrently set String in Map (time)                 |            222 ms |
+|[B3.3] 20√N clients concurrently set String in Map (updateSize)           |   8,261,120 bytes |
+|[B3.3] 20√N clients concurrently set String in Map (encodeTime)           |             23 ms |
+|[B3.3] 20√N clients concurrently set String in Map (docSize)              |   8,224,448 bytes |
+|[B3.3] 20√N clients concurrently set String in Map (memUsed)              |           16.1 MB |
+|[B3.3] 20√N clients concurrently set String in Map (parseTime)            |            793 ms |
+|[B3.4] 20√N clients concurrently insert text in Array (time)              |            176 ms |
+|[B3.4] 20√N clients concurrently insert text in Array (updateSize)        |     381,840 bytes |
+|[B3.4] 20√N clients concurrently insert text in Array (encodeTime)        |             13 ms |
+|[B3.4] 20√N clients concurrently insert text in Array (docSize)           |     345,168 bytes |
+|[B3.4] 20√N clients concurrently insert text in Array (memUsed)           |           12.4 MB |
+|[B3.4] 20√N clients concurrently insert text in Array (parseTime)         |            813 ms |
+|[B3.5] 20√N clients concurrently insert text (time)                       |            292 ms |
+|[B3.5] 20√N clients concurrently insert text (updateSize)                 |     554,640 bytes |
+|[B3.5] 20√N clients concurrently insert text (encodeTime)                 |             33 ms |
+|[B3.5] 20√N clients concurrently insert text (docSize)                    |     517,968 bytes |
+|[B3.5] 20√N clients concurrently insert text (memUsed)                    |           17.4 MB |
+|[B3.5] 20√N clients concurrently insert text (parseTime)                  |            932 ms |
 
 
 ##### Older benchmark results that include automerge & delta-crdts

@@ -5,17 +5,18 @@ import { runBenchmarks, writeBenchmarkResultsToFile } from '../../js-lib/index.j
 prepareAuths(1600)
 
 /*
- * [B2] and [B4] are skipped by default, see the "Giper Baza" section of the root README.
+ * Skipped by default, see the "Giper Baza" section of the root README. All three hit the same
+ * wall: `$giper_baza_land.sand_ordered` rebuilds the order of a Pawn from scratch on every
+ * write and is quadratic in the number of Sands it holds, tombstones included. Text is a
+ * character sequence here, so a delete-heavy trace piles up Sands fast and the total cost grows
+ * with the cube of the edit count.
  *
- * [B2] hits a merge bug in `$giper_baza_land.sand_ordered`: when two peers edit the same
- *      token and the second peer's Lord sorts before the first one's, part of the text is
- *      dropped. `node merge-bug.mjs` reproduces it on stock Baza in a dozen lines.
- * [B4] Baza re-sorts every Sand of a Pawn on each write, so replaying the 259,778 edit trace
- *      grows superlinearly: 1k edits 0.2 s, 2k 1.0 s, 4k 9.5 s. The full trace does not finish.
+ * [B1.7] / [B2.4] mix inserts with deletes and do not finish.
+ * [B4] / [B4x100] replay a 259,778 edit trace and do not finish.
  *
  * Set GIPER_BAZA_ALL=1 to run everything anyway.
  */
-const skipped = /^\[(B2|B4)/
+const skipped = /^\[(B1\.7|B2\.4|B4)/
 const filter = process.env.GIPER_BAZA_ALL
   ? (/** @type {string} */ _testName) => true
   : (/** @type {string} */ testName) => !skipped.test(testName)
